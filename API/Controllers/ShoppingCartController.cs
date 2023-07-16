@@ -20,6 +20,38 @@ namespace API.Controllers
             _db = db;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse>> Get(string userId)
+        {
+            try
+            {
+                if(string.IsNullOrEmpty(userId))
+                {
+                    _response.IsSuccess = false;
+                    _response.StatusCode = HttpStatusCode.BadRequest;
+                    return BadRequest(_response);
+                }
+                ShoppingCart shoppingCart = _db.ShoppingCarts
+                    .Include(u => u.CartItems).ThenInclude(u => u.MenuItem)
+                    .FirstOrDefault(x => x.UserId == userId);
+                if(shoppingCart != null && shoppingCart.CartItems.Count() >0)
+                {
+                    shoppingCart.CartTotal = shoppingCart.CartItems.Sum(u => u.Quantity * u.MenuItem.Price);
+                }
+                _response.Result = shoppingCart;
+                _response.IsSuccess = true;
+                _response.StatusCode = HttpStatusCode.OK;
+                return Ok(_response);
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                _response.ErrorMessages = new List<string>() { ex.ToString() };
+            }
+            return _response;
+        }
+
         [HttpPost]
         public async Task<ActionResult<ApiResponse>> AddOrUpdateItemInCart(string userId, int menuItemId, int updateQuantityBy)
         {
