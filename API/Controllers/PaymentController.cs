@@ -3,6 +3,7 @@ using API.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Stripe;
 using System.Net;
 
 namespace API.Controllers
@@ -35,19 +36,21 @@ namespace API.Controllers
 
             #region Create Payment Intent
 
-            //StripeConfiguration.ApiKey = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";
-
-            //var options = new PaymentIntentCreateOptions
-            //{
-            //    Amount = 2000,
-            //    Currency = "usd",
-            //    AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
-            //    {
-            //        Enabled = true,
-            //    },
-            //};
-            //var service = new PaymentIntentService();
-            //service.Create(options);
+            StripeConfiguration.ApiKey =_configuration["StripeSettings:SecretKey"];
+            shoppingCart.CartTotal = shoppingCart.CartItems.Sum(u => u.Quantity * u.MenuItem.Price);
+            PaymentIntentCreateOptions options = new()
+            {
+                Amount = (int)(shoppingCart.CartTotal * 100),
+                Currency = "usd",
+                AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+                {
+                    Enabled = true,
+                },
+            };
+            PaymentIntentService service = new();
+            PaymentIntent response = service.Create(options);
+            shoppingCart.StripePaymentIntentId = response.Id;
+            shoppingCart.ClientSecret = response.ClientSecret;
 
             #endregion
             _response.Result = shoppingCart;
